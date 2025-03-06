@@ -26,7 +26,7 @@ const Title = styled.h2`
 
 const LetterGrid = styled.div`
   display: grid;
-  grid-template-rows: repeat(4, 1fr);
+  grid-template-rows: auto 1fr auto;
   gap: 1rem;
   margin-bottom: 2rem;
 `;
@@ -47,10 +47,10 @@ const Letter = styled.div`
   font-weight: bold;
   transition: transform 0.2s ease;
   min-width: 3rem;
-  
-  &:hover {
-    transform: scale(1.05);
-  }
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const SolutionSection = styled.div`
@@ -147,13 +147,21 @@ const PuzzleDisplay: React.FC = () => {
           
           {/* Middle row with left and right sides */}
           <SideContainer>
-            {puzzleData?.square?.left?.split('').map((letter: string, index: number) => (
-              <Letter key={`left-${index}`}>{letter}</Letter>
-            ))}
+            {/* Left side (vertical) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {puzzleData?.square?.left?.split('').map((letter: string, index: number) => (
+                <Letter key={`left-${index}`}>{letter}</Letter>
+              ))}
+            </div>
+            
             <div style={{ flex: 1 }} /> {/* Spacer */}
-            {puzzleData?.square?.right?.split('').map((letter: string, index: number) => (
-              <Letter key={`right-${index}`}>{letter}</Letter>
-            ))}
+            
+            {/* Right side (vertical) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {puzzleData?.square?.right?.split('').map((letter: string, index: number) => (
+                <Letter key={`right-${index}`}>{letter}</Letter>
+              ))}
+            </div>
           </SideContainer>
           
           {/* Bottom side */}
