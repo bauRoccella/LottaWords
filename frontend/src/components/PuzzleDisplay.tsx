@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 
 const Container = styled.div`
@@ -24,11 +24,33 @@ const Title = styled.h2`
   margin-bottom: 1.5rem;
 `;
 
-const LetterGrid = styled.div`
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 1rem;
+const PuzzleGridContainer = styled.div`
+  position: relative;
+  width: 300px;
+  height: 300px;
   margin-bottom: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+`;
+
+const ConnectionsOverlay = styled.svg`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+`;
+
+const Square = styled.rect`
+  fill: none;
+  stroke: white;
+  stroke-width: 2;
+`;
+
+const LetterPosition = styled.div`
+  position: absolute;
+  z-index: 2;
 `;
 
 const SideContainer = styled.div`
@@ -40,14 +62,14 @@ const SideContainer = styled.div`
 const Letter = styled.div`
   background-color: #faa6a4;
   color: white;
-  padding: 1rem;
+  padding: 0.8rem;
   border-radius: 5px;
   text-align: center;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: bold;
   transition: transform 0.2s ease;
-  min-width: 3rem;
-  height: 3rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -106,6 +128,9 @@ const PuzzleDisplay: React.FC = () => {
     error: null
   });
   const [error, setError] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [letterPositions, setLetterPositions] = useState<{[key: string]: {x: number, y: number}}>({});
 
   useEffect(() => {
     const fetchPuzzleData = async () => {
@@ -125,6 +150,124 @@ const PuzzleDisplay: React.FC = () => {
     fetchPuzzleData();
   }, []);
 
+  useEffect(() => {
+    if (containerRef.current) {
+      const { width, height } = containerRef.current.getBoundingClientRect();
+      setContainerSize({ width, height });
+    }
+  }, [puzzleData]);
+
+  const calculateLetterPositions = () => {
+    const positions: {[key: string]: {x: number, y: number}} = {};
+    const padding = 35;
+    const width = containerSize.width - 2 * padding;
+    const height = containerSize.height - 2 * padding;
+    
+    if (puzzleData.square.top) {
+      const topLetters = puzzleData.square.top.split('');
+      const letterWidth = width / topLetters.length;
+      topLetters.forEach((letter, index) => {
+        positions[`top-${index}`] = {
+          x: padding + letterWidth * index + letterWidth / 2,
+          y: padding
+        };
+      });
+    }
+    
+    if (puzzleData.square.right) {
+      const rightLetters = puzzleData.square.right.split('');
+      const letterHeight = height / rightLetters.length;
+      rightLetters.forEach((letter, index) => {
+        positions[`right-${index}`] = {
+          x: width + padding,
+          y: padding + letterHeight * index + letterHeight / 2
+        };
+      });
+    }
+    
+    if (puzzleData.square.bottom) {
+      const bottomLetters = puzzleData.square.bottom.split('');
+      const letterWidth = width / bottomLetters.length;
+      bottomLetters.forEach((letter, index) => {
+        positions[`bottom-${index}`] = {
+          x: padding + letterWidth * index + letterWidth / 2,
+          y: height + padding
+        };
+      });
+    }
+    
+    if (puzzleData.square.left) {
+      const leftLetters = puzzleData.square.left.split('');
+      const letterHeight = height / leftLetters.length;
+      leftLetters.forEach((letter, index) => {
+        positions[`left-${index}`] = {
+          x: padding,
+          y: padding + letterHeight * index + letterHeight / 2
+        };
+      });
+    }
+    
+    setLetterPositions(positions);
+  };
+  
+  useEffect(() => {
+    if (containerSize.width > 0 && containerSize.height > 0) {
+      calculateLetterPositions();
+    }
+  }, [containerSize, puzzleData]);
+
+  const generateConnections = () => {
+    if (!puzzleData || !puzzleData.lotta_solution || !puzzleData.lotta_solution.length) {
+      return null;
+    }
+    
+    const solution = puzzleData.lotta_solution;
+    const paths = [];
+    
+    for (let wordIndex = 0; wordIndex < solution.length; wordIndex++) {
+      const word = solution[wordIndex];
+      
+      for (let i = 0; i < word.length - 1; i++) {
+        const startLetter = word[i];
+        const endLetter = word[i + 1];
+        
+        const startPos = findLetterPosition(startLetter);
+        const endPos = findLetterPosition(endLetter);
+        
+        if (startPos && endPos) {
+          paths.push(
+            <path 
+              key={`path-${wordIndex}-${i}`}
+              d={`M ${startPos.x} ${startPos.y} L ${endPos.x} ${endPos.y}`}
+              stroke="#faa6a4"
+              strokeWidth="2"
+              strokeOpacity="0.6"
+              strokeDasharray="5,5"
+              fill="none"
+            />
+          );
+        }
+      }
+    }
+    
+    return paths;
+  };
+  
+  const findLetterPosition = (letter: string) => {
+    const sides = ['top', 'right', 'bottom', 'left'];
+    
+    for (const side of sides) {
+      const letters = puzzleData.square[side as keyof typeof puzzleData.square].split('');
+      const index = letters.findIndex(l => l.toUpperCase() === letter.toUpperCase());
+      
+      if (index !== -1) {
+        return letterPositions[`${side}-${index}`];
+      }
+    }
+    
+    return null;
+  };
+
   if (isLoading) {
     return <Container>Loading puzzle...</Container>;
   }
@@ -137,40 +280,72 @@ const PuzzleDisplay: React.FC = () => {
     <Container>
       <PuzzleBox>
         <Title>Today's Puzzle</Title>
-        <LetterGrid>
-          {/* Top side */}
-          <SideContainer>
-            {puzzleData?.square?.top ? puzzleData.square.top.split('').map((letter: string, index: number) => (
-              <Letter key={`top-${index}`}>{letter}</Letter>
-            )) : <div>No data available</div>}
-          </SideContainer>
+        
+        <PuzzleGridContainer ref={containerRef}>
+          {containerSize.width > 0 && (
+            <ConnectionsOverlay>
+              <Square 
+                x={35} 
+                y={35} 
+                width={containerSize.width - 70} 
+                height={containerSize.height - 70} 
+              />
+              {generateConnections()}
+            </ConnectionsOverlay>
+          )}
           
-          {/* Middle row with left and right sides */}
-          <SideContainer>
-            {/* Left side (vertical) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {puzzleData?.square?.left?.split('').map((letter: string, index: number) => (
-                <Letter key={`left-${index}`}>{letter}</Letter>
-              ))}
-            </div>
-            
-            <div style={{ flex: 1 }} /> {/* Spacer */}
-            
-            {/* Right side (vertical) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {puzzleData?.square?.right?.split('').map((letter: string, index: number) => (
-                <Letter key={`right-${index}`}>{letter}</Letter>
-              ))}
-            </div>
-          </SideContainer>
+          {/* Top side */}
+          {puzzleData?.square?.top && puzzleData.square.top.split('').map((letter, index) => (
+            <LetterPosition 
+              key={`top-${index}`}
+              style={{
+                top: letterPositions[`top-${index}`]?.y - 20 || 0,
+                left: letterPositions[`top-${index}`]?.x - 20 || 0,
+              }}
+            >
+              <Letter>{letter}</Letter>
+            </LetterPosition>
+          ))}
+          
+          {/* Right side */}
+          {puzzleData?.square?.right && puzzleData.square.right.split('').map((letter, index) => (
+            <LetterPosition 
+              key={`right-${index}`}
+              style={{
+                top: letterPositions[`right-${index}`]?.y - 20 || 0,
+                left: letterPositions[`right-${index}`]?.x - 20 || 0,
+              }}
+            >
+              <Letter>{letter}</Letter>
+            </LetterPosition>
+          ))}
           
           {/* Bottom side */}
-          <SideContainer>
-            {puzzleData?.square?.bottom?.split('').map((letter: string, index: number) => (
-              <Letter key={`bottom-${index}`}>{letter}</Letter>
-            ))}
-          </SideContainer>
-        </LetterGrid>
+          {puzzleData?.square?.bottom && puzzleData.square.bottom.split('').map((letter, index) => (
+            <LetterPosition 
+              key={`bottom-${index}`}
+              style={{
+                top: letterPositions[`bottom-${index}`]?.y - 20 || 0,
+                left: letterPositions[`bottom-${index}`]?.x - 20 || 0,
+              }}
+            >
+              <Letter>{letter}</Letter>
+            </LetterPosition>
+          ))}
+          
+          {/* Left side */}
+          {puzzleData?.square?.left && puzzleData.square.left.split('').map((letter, index) => (
+            <LetterPosition 
+              key={`left-${index}`}
+              style={{
+                top: letterPositions[`left-${index}`]?.y - 20 || 0,
+                left: letterPositions[`left-${index}`]?.x - 20 || 0,
+              }}
+            >
+              <Letter>{letter}</Letter>
+            </LetterPosition>
+          ))}
+        </PuzzleGridContainer>
 
         <SolutionSection>
           <SolutionTitle>NYT Solution</SolutionTitle>
