@@ -94,7 +94,17 @@ interface PuzzleData {
 
 const PuzzleDisplay: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [puzzleData, setPuzzleData] = useState<PuzzleData | null>(null);
+  const [puzzleData, setPuzzleData] = useState<PuzzleData>({
+    square: {
+      top: '',
+      right: '',
+      bottom: '',
+      left: ''
+    },
+    nyt_solution: [],
+    lotta_solution: [],
+    error: null
+  });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -130,25 +140,25 @@ const PuzzleDisplay: React.FC = () => {
         <LetterGrid>
           {/* Top side */}
           <SideContainer>
-            {puzzleData.square.top.split('').map((letter: string, index: number) => (
+            {puzzleData?.square?.top ? puzzleData.square.top.split('').map((letter: string, index: number) => (
               <Letter key={`top-${index}`}>{letter}</Letter>
-            ))}
+            )) : <div>No data available</div>}
           </SideContainer>
           
           {/* Middle row with left and right sides */}
           <SideContainer>
-            {puzzleData.square.left.split('').map((letter: string, index: number) => (
+            {puzzleData?.square?.left?.split('').map((letter: string, index: number) => (
               <Letter key={`left-${index}`}>{letter}</Letter>
             ))}
             <div style={{ flex: 1 }} /> {/* Spacer */}
-            {puzzleData.square.right.split('').map((letter: string, index: number) => (
+            {puzzleData?.square?.right?.split('').map((letter: string, index: number) => (
               <Letter key={`right-${index}`}>{letter}</Letter>
             ))}
           </SideContainer>
           
           {/* Bottom side */}
           <SideContainer>
-            {puzzleData.square.bottom.split('').map((letter: string, index: number) => (
+            {puzzleData?.square?.bottom?.split('').map((letter: string, index: number) => (
               <Letter key={`bottom-${index}`}>{letter}</Letter>
             ))}
           </SideContainer>

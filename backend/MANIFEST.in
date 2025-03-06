@@ -1,0 +1,2 @@
+include src/lottawords/data/*.txt
+include src/lottawords/templates/*.html

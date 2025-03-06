@@ -3,11 +3,13 @@ from flask_cors import CORS
 import sys
 import os
 
-# Add the parent directory to Python path so we can import from src
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the src directory to the path
+src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')
+sys.path.insert(0, src_dir)
 
-from src.lottawords.scraper import LetterBoxedScraper
-from src.lottawords.solver import LetterBoxedSolver
+# Now try the import
+from lottawords.scraper import LetterBoxedScraper
+from lottawords.solver import LetterBoxedSolver
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes

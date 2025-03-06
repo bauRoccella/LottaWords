@@ -7,6 +7,7 @@ import logging
 import copy
 import os
 import pkg_resources
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -17,14 +18,43 @@ class LetterBoxedSolver:
         logger.info(f"Loaded {len(self.word_list)} words from dictionary")
 
     def _load_words(self, filename: str) -> List[str]:
-        """Load words from dictionary file."""
+        """Load words from dictionary file with fallback strategies."""
+        # Get paths to try
+        module_dir = os.path.dirname(os.path.abspath(__file__))
+        paths_to_try = [
+            # Option 1: Direct path from module directory
+            os.path.join(module_dir, 'data', os.path.basename(filename)),
+            # Option 2: Path relative to current working directory
+            os.path.join(os.getcwd(), 'src', 'lottawords', 'data', os.path.basename(filename)),
+            # Option 3: If just filename provided
+            os.path.join(module_dir, os.path.basename(filename)),
+            # Option 4: Original path unchanged
+            filename
+        ]
+        
+        # Try pkg_resources as last resort
         try:
-            file_path = pkg_resources.resource_filename('lottawords', filename)
-            with open(file_path, "r") as file:
-                return [line.strip().lower() for line in file if len(line.strip()) >= 3]
-        except FileNotFoundError:
-            logger.error(f"Word file {filename} not found")
-            return []
+            pkg_path = pkg_resources.resource_filename('lottawords', 
+                                                      f'data/{os.path.basename(filename)}')
+            paths_to_try.append(pkg_path)
+        except Exception:
+            pass
+        
+        # Try each path
+        for path in paths_to_try:
+            try:
+                print(f"Trying to load words from: {path}")
+                if os.path.exists(path):
+                    with open(path, "r") as file:
+                        words = [line.strip().lower() for line in file if len(line.strip()) >= 3]
+                        print(f"Successfully loaded {len(words)} words from {path}")
+                        return words
+            except Exception as e:
+                print(f"Failed to load from {path}: {e}")
+        
+        # If all paths fail
+        print(f"ERROR: Failed to find word file. Tried: {paths_to_try}")
+        return []
 
     def _normalize_square(self, square: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
         """Convert all letters in square to lowercase."""
