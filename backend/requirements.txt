@@ -1,0 +1,11 @@
+# Development dependencies
+pytest==8.0.2
+black==24.2.0
+flake8==7.0.0
+mypy==1.8.0
+
+# For local development and testing
+-e .
+
+# Production server
+gunicorn==21.2.0 

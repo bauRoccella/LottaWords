@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LetterBoxed Solutions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .puzzle-section {
+            margin-bottom: 30px;
+        }
+        .letters-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .side {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        .solution {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LetterBoxed Solutions</h1>
+        
+        <div class="puzzle-section">
+            <h2>Today's Letters</h2>
+            <div class="letters-grid">
+                {% for side in sides %}
+                <div class="side">{{ side|join(', ') }}</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="puzzle-section">
+            <h2>NYT Solution</h2>
+            <div class="solution">
+                {{ nyt_solution|join(' → ') }}
+            </div>
+        </div>
+
+        <div class="puzzle-section">
+            <h2>LottaWords Solution</h2>
+            <div class="solution">
+                {{ lotta_solution|join(' → ') if lotta_solution else 'No solution found' }}
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
