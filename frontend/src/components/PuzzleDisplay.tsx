@@ -15,7 +15,7 @@ const PuzzleBox = styled.div`
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 600px;
+  max-width: 800px;
 `;
 
 const Title = styled.h2`
@@ -26,8 +26,8 @@ const Title = styled.h2`
 
 const PuzzleGridContainer = styled.div`
   position: relative;
-  width: 300px;
-  height: 300px;
+  width: 400px;
+  height: 400px;
   margin-bottom: 2rem;
   margin-left: auto;
   margin-right: auto;
@@ -59,20 +59,28 @@ const SideContainer = styled.div`
   gap: 1rem;
 `;
 
-const Letter = styled.div`
-  background-color: #faa6a4;
+const Letter = styled.div<{ isStartingLetter?: boolean }>`
+  background-color: ${props => props.isStartingLetter ? '#FF7473' : '#faa6a4'};
   color: white;
-  padding: 0.8rem;
-  border-radius: 5px;
+  padding: 1rem;
+  border-radius: 8px;
   text-align: center;
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   font-weight: bold;
   transition: transform 0.2s ease;
-  min-width: 2.5rem;
-  height: 2.5rem;
+  min-width: 3.2rem;
+  height: 3.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: ${props => props.isStartingLetter ? '0 0 10px #FF7473' : 'none'};
+`;
+
+const SolutionsContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  width: 100%;
 `;
 
 const SolutionSection = styled.div`
@@ -80,6 +88,8 @@ const SolutionSection = styled.div`
   padding: 1rem;
   border-radius: 5px;
   margin-top: 1rem;
+  flex: 1;
+  min-width: 0;
 `;
 
 const SolutionTitle = styled.h3`
@@ -100,6 +110,28 @@ const SolutionItem = styled.li`
   &:last-child {
     border-bottom: none;
   }
+`;
+
+// Update the AnimatedPath styled component to reverse the animation
+const AnimatedPath = styled.path`
+  stroke-dasharray: 5, 5;
+  animation: dashOffset 1.5s linear infinite;
+  
+  @keyframes dashOffset {
+    from {
+      stroke-dashoffset: 20; /* Start from 20 instead of 0 */
+    }
+    to {
+      stroke-dashoffset: 0; /* End at 0 instead of 20 */
+    }
+  }
+`;
+
+// Add a styled span for the first letter highlight
+const HighlightedLetter = styled.span`
+  color: #FF1493;
+  font-weight: bold;
+  font-size: 1.2em;
 `;
 
 interface PuzzleData {
@@ -159,7 +191,7 @@ const PuzzleDisplay: React.FC = () => {
 
   const calculateLetterPositions = () => {
     const positions: {[key: string]: {x: number, y: number}} = {};
-    const padding = 35;
+    const padding = 45;
     const width = containerSize.width - 2 * padding;
     const height = containerSize.height - 2 * padding;
     
@@ -236,13 +268,12 @@ const PuzzleDisplay: React.FC = () => {
         
         if (startPos && endPos) {
           paths.push(
-            <path 
+            <AnimatedPath 
               key={`path-${wordIndex}-${i}`}
               d={`M ${startPos.x} ${startPos.y} L ${endPos.x} ${endPos.y}`}
               stroke="#faa6a4"
               strokeWidth="2"
               strokeOpacity="0.6"
-              strokeDasharray="5,5"
               fill="none"
             />
           );
@@ -268,6 +299,15 @@ const PuzzleDisplay: React.FC = () => {
     return null;
   };
 
+  const isStartingLetter = (letter: string) => {
+    if (!puzzleData.lotta_solution) return false;
+    
+    // Get only the first letters from LottaWords solution
+    const startingLetters = puzzleData.lotta_solution.map(word => word.charAt(0).toUpperCase());
+    
+    return startingLetters.includes(letter.toUpperCase());
+  };
+
   if (isLoading) {
     return <Container>Loading puzzle...</Container>;
   }
@@ -285,10 +325,10 @@ const PuzzleDisplay: React.FC = () => {
           {containerSize.width > 0 && (
             <ConnectionsOverlay>
               <Square 
-                x={35} 
-                y={35} 
-                width={containerSize.width - 70} 
-                height={containerSize.height - 70} 
+                x={45} 
+                y={45} 
+                width={containerSize.width - 90} 
+                height={containerSize.height - 90} 
               />
               {generateConnections()}
             </ConnectionsOverlay>
@@ -299,11 +339,11 @@ const PuzzleDisplay: React.FC = () => {
             <LetterPosition 
               key={`top-${index}`}
               style={{
-                top: letterPositions[`top-${index}`]?.y - 20 || 0,
-                left: letterPositions[`top-${index}`]?.x - 20 || 0,
+                top: letterPositions[`top-${index}`]?.y - 25 || 0,
+                left: letterPositions[`top-${index}`]?.x - 25 || 0,
               }}
             >
-              <Letter>{letter}</Letter>
+              <Letter isStartingLetter={isStartingLetter(letter)}>{letter}</Letter>
             </LetterPosition>
           ))}
           
@@ -316,7 +356,7 @@ const PuzzleDisplay: React.FC = () => {
                 left: letterPositions[`right-${index}`]?.x - 20 || 0,
               }}
             >
-              <Letter>{letter}</Letter>
+              <Letter isStartingLetter={isStartingLetter(letter)}>{letter}</Letter>
             </LetterPosition>
           ))}
           
@@ -329,7 +369,7 @@ const PuzzleDisplay: React.FC = () => {
                 left: letterPositions[`bottom-${index}`]?.x - 20 || 0,
               }}
             >
-              <Letter>{letter}</Letter>
+              <Letter isStartingLetter={isStartingLetter(letter)}>{letter}</Letter>
             </LetterPosition>
           ))}
           
@@ -342,28 +382,36 @@ const PuzzleDisplay: React.FC = () => {
                 left: letterPositions[`left-${index}`]?.x - 20 || 0,
               }}
             >
-              <Letter>{letter}</Letter>
+              <Letter isStartingLetter={isStartingLetter(letter)}>{letter}</Letter>
             </LetterPosition>
           ))}
         </PuzzleGridContainer>
 
-        <SolutionSection>
-          <SolutionTitle>NYT Solution</SolutionTitle>
-          <SolutionList>
-            {puzzleData.nyt_solution.map((solution: string, index: number) => (
-              <SolutionItem key={`nyt-${index}`}>{solution}</SolutionItem>
-            ))}
-          </SolutionList>
-        </SolutionSection>
+        <SolutionsContainer>
+          <SolutionSection>
+            <SolutionTitle>NYT Solution</SolutionTitle>
+            <SolutionList>
+              {puzzleData.nyt_solution.map((solution: string, index: number) => (
+                <SolutionItem key={`nyt-${index}`}>
+                  <HighlightedLetter>{solution.charAt(0)}</HighlightedLetter>
+                  {solution.substring(1)}
+                </SolutionItem>
+              ))}
+            </SolutionList>
+          </SolutionSection>
 
-        <SolutionSection>
-          <SolutionTitle>LottaWords Solution</SolutionTitle>
-          <SolutionList>
-            {puzzleData.lotta_solution.map((solution: string, index: number) => (
-              <SolutionItem key={`lotta-${index}`}>{solution}</SolutionItem>
-            ))}
-          </SolutionList>
-        </SolutionSection>
+          <SolutionSection>
+            <SolutionTitle>LottaWords Solution</SolutionTitle>
+            <SolutionList>
+              {puzzleData.lotta_solution.map((solution: string, index: number) => (
+                <SolutionItem key={`lotta-${index}`}>
+                  <HighlightedLetter>{solution.charAt(0)}</HighlightedLetter>
+                  {solution.substring(1)}
+                </SolutionItem>
+              ))}
+            </SolutionList>
+          </SolutionSection>
+        </SolutionsContainer>
       </PuzzleBox>
     </Container>
   );
