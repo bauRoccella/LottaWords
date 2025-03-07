@@ -25,22 +25,38 @@ cache = {
 
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'puzzle_cache.json')
 
+def is_cache_valid():
+    """Check if cache is valid (from today and after the last puzzle update)"""
+    if not cache['puzzle_data'] or not cache['last_updated']:
+        return False
+        
+    last_updated = datetime.fromisoformat(cache['last_updated'])
+    now = datetime.now(pytz.timezone('US/Eastern'))
+    cutoff_time = now.replace(hour=3, minute=5, second=0, microsecond=0)
+    
+    # If we're before 3:05 AM, the cutoff was yesterday
+    if now.hour < 3 or (now.hour == 3 and now.minute < 5):
+        cutoff_time = cutoff_time - timedelta(days=1)
+    
+    # Cache is valid if it's from after the most recent cutoff time
+    return last_updated.astimezone(pytz.timezone('US/Eastern')) >= cutoff_time
+
 def load_cache_from_file():
-    """Load cached puzzle data from file if it exists and is from today"""
+    """Load cached puzzle data from file if it exists and is valid"""
     if os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE, 'r') as f:
                 saved_cache = json.load(f)
             
-            # Check if cache is from today
-            last_updated = datetime.fromisoformat(saved_cache['last_updated'])
-            today = datetime.now().date()
-            if last_updated.date() == today:
-                cache['puzzle_data'] = saved_cache['puzzle_data']
-                cache['last_updated'] = saved_cache['last_updated']
-                print(f"Loaded cache from {last_updated}")
+            cache['puzzle_data'] = saved_cache['puzzle_data']
+            cache['last_updated'] = saved_cache['last_updated']
+            
+            if is_cache_valid():
+                print(f"Loaded valid cache from {cache['last_updated']}")
             else:
-                print(f"Cache from {last_updated.date()} is outdated (today is {today})")
+                print("Cache is outdated, will fetch fresh data")
+                cache['puzzle_data'] = None
+                cache['last_updated'] = None
         except Exception as e:
             print(f"Error loading cache: {e}")
 
@@ -103,12 +119,8 @@ def fetch_puzzle_data():
 @app.route('/api/puzzle')
 def get_puzzle_data():
     """API endpoint to get puzzle data (from cache if available)"""
-    # Check if we have valid cached data from today
-    if cache['puzzle_data'] and cache['last_updated']:
-        last_updated = datetime.fromisoformat(cache['last_updated'])
-        # If cache is from today, use it
-        if last_updated.date() == datetime.now().date():
-            return jsonify(cache['puzzle_data'])
+    if is_cache_valid():
+        return jsonify(cache['puzzle_data'])
     
     # Otherwise fetch fresh data
     result = fetch_puzzle_data()
@@ -142,7 +154,7 @@ load_cache_from_file()
 init_scheduler()
 
 # Fetch puzzle data on startup if needed
-if not cache['puzzle_data'] or not cache['last_updated']:
+if not is_cache_valid():
     fetch_puzzle_data()
 
 @app.route('/')
