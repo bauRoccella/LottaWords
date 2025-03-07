@@ -13,6 +13,9 @@ setup(
         "flask-cors>=4.0.0",
         "flask-caching>=2.1.0",
         "python-json-logger>=2.0.7",
+        "apscheduler>=3.11.0",
+        "pytz>=2025.1",
+        "setuptools>=75.0.0",
     ],
     include_package_data=True,
     package_data={
