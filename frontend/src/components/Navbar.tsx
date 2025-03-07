@@ -16,9 +16,6 @@ const Logo = styled.div`
   font-weight: bold;
   cursor: pointer;
   
-  &:hover {
-    color: #4a9eff;
-  }
 `;
 
 const NavLinks = styled.div`
@@ -33,7 +30,7 @@ const NavLink = styled.a`
   transition: color 0.2s ease;
   
   &:hover {
-    color: #4a9eff;
+    color: #ff5a57;
   }
 `;
 
@@ -42,9 +39,9 @@ const Navbar: React.FC = () => {
     <Nav>
       <Logo>LottaWords</Logo>
       <NavLinks>
-        <NavLink href="/">Play</NavLink>
-        <NavLink href="/rules">Rules</NavLink>
-        <NavLink href="/stats">Stats</NavLink>
+        <NavLink href="https://www.nytimes.com/puzzles/letter-boxed" target="_blank" rel="noopener noreferrer">NYT Letter Boxed</NavLink>
+        <NavLink href="https://github.com/bauRoccella/LottaWords" target="_blank" rel="noopener noreferrer">GitHub Repo</NavLink>
+        <NavLink href="https://www.linkedin.com/in/bautistaroccella/" target="_blank" rel="noopener noreferrer">LinkedIn</NavLink>
       </NavLinks>
     </Nav>
   );

@@ -33,8 +33,8 @@ const Footer: React.FC = () => {
       <FooterContent>
         <p>
           Created by{' '}
-          <Link href="https://github.com/yourusername" target="_blank" rel="noopener noreferrer">
-            Your Name
+          <Link href="https://github.com/bauRoccella" target="_blank" rel="noopener noreferrer">
+            Bautista Roccella
           </Link>{' '}
           © {new Date().getFullYear()}
         </p>

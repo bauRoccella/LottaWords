@@ -11,8 +11,7 @@ const AppContainer = styled.div`
 `;
 
 const MainContent = styled.main`
-  padding: 2rem;
-  padding-bottom: 6rem; // Space for footer
+
 `;
 
 const App: React.FC = () => {

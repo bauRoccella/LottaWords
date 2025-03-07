@@ -21,7 +21,6 @@ const PuzzleBox = styled.div`
 const Title = styled.h2`
   color: white;
   text-align: center;
-  margin-bottom: 1.5rem;
 `;
 
 const PuzzleGridContainer = styled.div`
@@ -59,8 +58,8 @@ const SideContainer = styled.div`
   gap: 1rem;
 `;
 
-const Letter = styled.div<{ isStartingLetter?: boolean }>`
-  background-color: ${props => props.isStartingLetter ? '#FF7473' : '#faa6a4'};
+const Letter = styled.div<{ highlightColor?: string }>`
+  background-color: ${props => props.highlightColor || '#FF5A57'};
   color: white;
   padding: 1rem;
   border-radius: 8px;
@@ -73,7 +72,7 @@ const Letter = styled.div<{ isStartingLetter?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: ${props => props.isStartingLetter ? '0 0 10px #FF7473' : 'none'};
+  box-shadow: ${props => props.highlightColor ? `0 0 10px ${props.highlightColor}` : 'none'};
 `;
 
 const SolutionsContainer = styled.div`
@@ -127,12 +126,15 @@ const AnimatedPath = styled.path`
   }
 `;
 
-// Add a styled span for the first letter highlight
-const HighlightedLetter = styled.span`
-  color: #FF1493;
+// Add a styled span for the first letter highlight with dynamic color
+const HighlightedLetter = styled.span<{ color: string }>`
+  color: ${props => props.color};
   font-weight: bold;
   font-size: 1.2em;
 `;
+
+// Define the color array at the component level so it can be used in multiple places
+const wordColors = ['#faa6a4', '#64C9CF', '#9D65C9', '#5CDB95', '#FFD166'];
 
 interface PuzzleData {
   square: {
@@ -145,6 +147,45 @@ interface PuzzleData {
   lotta_solution: string[];
   error: string | null;
 }
+
+// Update the SwapIcon to be larger and without margin
+const SwapIcon = () => (
+  <svg 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <path d="M7 16l-4-4 4-4" />
+    <path d="M17 8l4 4-4 4" />
+    <path d="M3 12h18" />
+  </svg>
+);
+
+// Update the ToggleButton to be more compact and square
+const ToggleButton = styled.button`
+  background-color: #2a2a2a;
+  color: white;
+  border: 2px solid white;
+  border-radius: 4px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  
+  &:hover {
+    background-color: #3D3D3D;
+    border-color: white;
+  }
+`;
 
 const PuzzleDisplay: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -163,6 +204,7 @@ const PuzzleDisplay: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [letterPositions, setLetterPositions] = useState<{[key: string]: {x: number, y: number}}>({});
+  const [showNYTSolution, setShowNYTSolution] = useState(false);
 
   useEffect(() => {
     const fetchPuzzleData = async () => {
@@ -249,15 +291,17 @@ const PuzzleDisplay: React.FC = () => {
   }, [containerSize, puzzleData]);
 
   const generateConnections = () => {
-    if (!puzzleData || !puzzleData.lotta_solution || !puzzleData.lotta_solution.length) {
+    const solution = showNYTSolution ? puzzleData.nyt_solution : puzzleData.lotta_solution;
+    
+    if (!puzzleData || !solution || !solution.length) {
       return null;
     }
     
-    const solution = puzzleData.lotta_solution;
     const paths = [];
     
     for (let wordIndex = 0; wordIndex < solution.length; wordIndex++) {
       const word = solution[wordIndex];
+      const color = wordColors[wordIndex % wordColors.length];
       
       for (let i = 0; i < word.length - 1; i++) {
         const startLetter = word[i];
@@ -271,7 +315,7 @@ const PuzzleDisplay: React.FC = () => {
             <AnimatedPath 
               key={`path-${wordIndex}-${i}`}
               d={`M ${startPos.x} ${startPos.y} L ${endPos.x} ${endPos.y}`}
-              stroke="#faa6a4"
+              stroke={color}
               strokeWidth="2"
               strokeOpacity="0.6"
               fill="none"
@@ -299,14 +343,28 @@ const PuzzleDisplay: React.FC = () => {
     return null;
   };
 
-  const isStartingLetter = (letter: string) => {
-    if (!puzzleData.lotta_solution) return false;
+  const getHighlightColor = (letter: string) => {
+    const solution = showNYTSolution ? puzzleData.nyt_solution : puzzleData.lotta_solution;
     
-    // Get only the first letters from LottaWords solution
-    const startingLetters = puzzleData.lotta_solution.map(word => word.charAt(0).toUpperCase());
+    if (!solution) return null;
     
-    return startingLetters.includes(letter.toUpperCase());
+    for (let i = 0; i < solution.length; i++) {
+      const word = solution[i];
+      if (word.charAt(0).toUpperCase() === letter.toUpperCase()) {
+        return wordColors[i % wordColors.length];
+      }
+    }
+    
+    return null;
   };
+
+  const TitleContainer = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  `;
 
   if (isLoading) {
     return <Container>Loading puzzle...</Container>;
@@ -319,7 +377,15 @@ const PuzzleDisplay: React.FC = () => {
   return (
     <Container>
       <PuzzleBox>
-        <Title>Today's Puzzle</Title>
+        <TitleContainer>
+          <Title>Today's Puzzle</Title>
+          <ToggleButton 
+            onClick={() => setShowNYTSolution(!showNYTSolution)}
+            title={showNYTSolution ? "Show LottaWords Solution" : "Show NYT Solution"}
+          >
+            <SwapIcon />
+          </ToggleButton>
+        </TitleContainer>
         
         <PuzzleGridContainer ref={containerRef}>
           {containerSize.width > 0 && (
@@ -343,7 +409,7 @@ const PuzzleDisplay: React.FC = () => {
                 left: letterPositions[`top-${index}`]?.x - 25 || 0,
               }}
             >
-              <Letter isStartingLetter={isStartingLetter(letter)}>{letter}</Letter>
+              <Letter highlightColor={getHighlightColor(letter) || undefined}>{letter}</Letter>
             </LetterPosition>
           ))}
           
@@ -356,7 +422,7 @@ const PuzzleDisplay: React.FC = () => {
                 left: letterPositions[`right-${index}`]?.x - 20 || 0,
               }}
             >
-              <Letter isStartingLetter={isStartingLetter(letter)}>{letter}</Letter>
+              <Letter highlightColor={getHighlightColor(letter) || undefined}>{letter}</Letter>
             </LetterPosition>
           ))}
           
@@ -369,7 +435,7 @@ const PuzzleDisplay: React.FC = () => {
                 left: letterPositions[`bottom-${index}`]?.x - 20 || 0,
               }}
             >
-              <Letter isStartingLetter={isStartingLetter(letter)}>{letter}</Letter>
+              <Letter highlightColor={getHighlightColor(letter) || undefined}>{letter}</Letter>
             </LetterPosition>
           ))}
           
@@ -382,18 +448,20 @@ const PuzzleDisplay: React.FC = () => {
                 left: letterPositions[`left-${index}`]?.x - 20 || 0,
               }}
             >
-              <Letter isStartingLetter={isStartingLetter(letter)}>{letter}</Letter>
+              <Letter highlightColor={getHighlightColor(letter) || undefined}>{letter}</Letter>
             </LetterPosition>
           ))}
         </PuzzleGridContainer>
 
         <SolutionsContainer>
           <SolutionSection>
-            <SolutionTitle>NYT Solution</SolutionTitle>
+            <SolutionTitle>LottaWords Solution</SolutionTitle>
             <SolutionList>
-              {puzzleData.nyt_solution.map((solution: string, index: number) => (
-                <SolutionItem key={`nyt-${index}`}>
-                  <HighlightedLetter>{solution.charAt(0)}</HighlightedLetter>
+              {puzzleData.lotta_solution.map((solution: string, index: number) => (
+                <SolutionItem key={`lotta-${index}`}>
+                  <HighlightedLetter color={wordColors[index % wordColors.length]}>
+                    {solution.charAt(0)}
+                  </HighlightedLetter>
                   {solution.substring(1)}
                 </SolutionItem>
               ))}
@@ -401,11 +469,13 @@ const PuzzleDisplay: React.FC = () => {
           </SolutionSection>
 
           <SolutionSection>
-            <SolutionTitle>LottaWords Solution</SolutionTitle>
+            <SolutionTitle>NYT Solution</SolutionTitle>
             <SolutionList>
-              {puzzleData.lotta_solution.map((solution: string, index: number) => (
-                <SolutionItem key={`lotta-${index}`}>
-                  <HighlightedLetter>{solution.charAt(0)}</HighlightedLetter>
+              {puzzleData.nyt_solution.map((solution: string, index: number) => (
+                <SolutionItem key={`nyt-${index}`}>
+                  <HighlightedLetter color={wordColors[index % wordColors.length]}>
+                    {solution.charAt(0)}
+                  </HighlightedLetter>
                   {solution.substring(1)}
                 </SolutionItem>
               ))}
