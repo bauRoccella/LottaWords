@@ -46,7 +46,7 @@ class LetterBoxedSolver:
                 print(f"Trying to load words from: {path}")
                 if os.path.exists(path):
                     with open(path, "r") as file:
-                        words = [line.strip().lower() for line in file if len(line.strip()) >= 3]
+                        words = [line.strip() for line in file if len(line.strip()) >= 3]
                         print(f"Successfully loaded {len(words)} words from {path}")
                         return words
             except Exception as e:
@@ -58,7 +58,7 @@ class LetterBoxedSolver:
 
     def _normalize_square(self, square: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
         """Convert all letters in square to lowercase."""
-        return {side: {letter.lower() for letter in letters} for side, letters in square.items()}
+        return {side: {letter for letter in letters} for side, letters in square.items()}
 
     def is_valid_word(self, word: str, square: Dict[str, Set[str]]) -> bool:
         """
@@ -74,7 +74,6 @@ class LetterBoxedSolver:
         if not word:
             return False
             
-        word = word.lower()
         
         # Use normalized square without modifying input
         normalized_square = self._normalize_square(square)
@@ -112,13 +111,13 @@ class LetterBoxedSolver:
         """Check if all letters in the square are used."""
         normalized_square = self._normalize_square(square)
         all_letters = set().union(*normalized_square.values())
-        used_letters = {letter.lower() for letter in used_letters}
+        used_letters = {letter for letter in used_letters}
         return all_letters.issubset(used_letters)
 
     def word_priority(self, word: str, used_letters: Set[str]) -> int:
         """Calculate priority score for a word based on unused letters it contains."""
-        word_letters = set(word.lower())
-        used_letters = {letter.lower() for letter in used_letters}
+        word_letters = set(word)
+        used_letters = {letter for letter in used_letters}
         return len(word_letters - used_letters)
 
     def find_shortest_solution(self, square: Dict[str, Set[str]]) -> Optional[List[str]]:
@@ -142,7 +141,7 @@ class LetterBoxedSolver:
         
         queue: deque = deque()
         for word in playable_words:
-            queue.append(([word], set(word.lower())))
+            queue.append(([word], set(word)))
             logger.debug(f"Added initial word to queue: {word}")
 
         visited = set()
@@ -171,8 +170,8 @@ class LetterBoxedSolver:
                 min_solution_len = len(current_words)
                 continue
 
-            last_letter = current_words[-1][-1].lower()
-            next_words = [w for w in playable_words if w[0].lower() == last_letter]
+            last_letter = current_words[-1][-1]
+            next_words = [w for w in playable_words if w[0] == last_letter]
             logger.debug(f"Possible next words starting with '{last_letter}': {next_words}")
             
             # Sort next words by priority (number of new letters) and length
@@ -182,7 +181,7 @@ class LetterBoxedSolver:
             for word in next_words[:10]:  # Limit branching factor
                 if len(current_words) < 4:  # Limit solution length
                     new_words = current_words + [word]
-                    new_letters = used_letters | set(word.lower())
+                    new_letters = used_letters | set(word)
                     queue.append((new_words, new_letters))
                     logger.debug(f"Added new path to queue: {new_words}")
 
