@@ -73,20 +73,48 @@ def save_cache_to_file():
 def fetch_puzzle_data():
     """Fetch fresh puzzle data from NYT and solve it"""
     try:
-        print("Fetching new puzzle data...")
+        print("\n" + "="*80)
+        print("FETCHING NEW PUZZLE DATA")
+        print("="*80)
+        
         scraper = LetterBoxedScraper()
-        sides, nyt_solution = scraper.get_puzzle_data()
+        sides, nyt_solution, nyt_dictionary = scraper.get_puzzle_data()
+        
+        print("\nDATA FROM SCRAPER:")
+        print(f"Sides: {sides}")
+        print(f"NYT solution: {nyt_solution}")
+        print(f"Dictionary type: {type(nyt_dictionary)}")
+        print(f"Dictionary length: {len(nyt_dictionary) if nyt_dictionary else 0}")
+        
+        # Make sure we have valid sides data
+        if not sides or len(sides) != 4:
+            print("Error: Invalid or missing sides data from NYT")
+            return {'error': 'Failed to retrieve puzzle data from NYT: Invalid sides data'}
         
         # Format sides into a square dictionary as expected by find_shortest_solution
         square = {
-            "top": set(sides[0]),
-            "right": set(sides[1]),
-            "bottom": set(sides[2]),
-            "left": set(sides[3])
+            "top": sides[0],
+            "right": sides[1],
+            "bottom": sides[2],
+            "left": sides[3]
         }
+        print(f"Square for solver: {square}")
+        
+        # Check if we have a valid dictionary from NYT
+        if not nyt_dictionary or len(nyt_dictionary) == 0:
+            print("Error: No dictionary received from NYT")
+            return {'error': 'Failed to retrieve dictionary from NYT website. The page structure may have changed or the site may be temporarily unavailable.'}
         
         solver = LetterBoxedSolver()
-        lotta_solution = solver.find_shortest_solution(square)
+        # Use the NYT dictionary - the solver will always return a list (may be empty)
+        lotta_solution = solver.find_shortest_solution(square, nyt_dictionary)
+        
+        # Ensure nyt_solution is a list of strings
+        if not nyt_solution or not isinstance(nyt_solution, list):
+            nyt_solution = []
+        else:
+            # Convert all items to strings if needed
+            nyt_solution = [str(word) for word in nyt_solution]
         
         # Format for consistent response
         formatted_data = {
@@ -101,6 +129,12 @@ def fetch_puzzle_data():
             'error': None
         }
         
+        print("\nSENDING TO FRONTEND:")
+        print(f"Square: {formatted_data['square']}")
+        print(f"NYT solution: {formatted_data['nyt_solution']}")
+        print(f"LottaWords solution: {formatted_data['lotta_solution']}")
+        print(f"LottaWords solution type: {type(formatted_data['lotta_solution'])}")
+        
         # Update cache
         cache['puzzle_data'] = formatted_data
         cache['last_updated'] = datetime.now().isoformat()
@@ -108,25 +142,100 @@ def fetch_puzzle_data():
         # Save to file
         save_cache_to_file()
         
-        print("Puzzle data updated successfully")
+        print("\nPuzzle data updated successfully")
+        print("="*80 + "\n")
         return formatted_data
     except Exception as e:
         import traceback
-        print(f"Error fetching puzzle data: {e}")
+        print(f"Error in fetch_puzzle_data: {e}")
         print(traceback.format_exc())
         return {'error': str(e)}
 
 @app.route('/api/puzzle')
 def get_puzzle_data():
     """API endpoint to get puzzle data (from cache if available)"""
+    global scraping_in_progress
+    
+    # Initialize the flag if it doesn't exist
+    if 'scraping_in_progress' not in globals():
+        scraping_in_progress = False
+    
+    # Check for valid cache
     if is_cache_valid():
+        print("Using valid cache data")
         return jsonify(cache['puzzle_data'])
     
-    # Otherwise fetch fresh data
-    result = fetch_puzzle_data()
-    if 'error' in result and result['error']:
-        return jsonify(result), 500
-    return jsonify(result)
+    # Check if scraping is already in progress
+    if scraping_in_progress:
+        print("Scraping already in progress, returning status")
+        return jsonify({
+            'status': 'loading',
+            'message': 'Data is being prepared, please try again in a moment'
+        })
+    
+    # If we're here, we need fresh data and no scraping is happening
+    scraping_in_progress = True
+    try:
+        print("Starting fresh data fetch")
+        result = fetch_puzzle_data()
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error during fetch: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+    finally:
+        scraping_in_progress = False
+
+@app.route('/api/status')
+def get_scraping_status():
+    """Check if initial scraping is in progress"""
+    if 'scraping_in_progress' not in globals():
+        scraping_in_progress = False
+        
+    return jsonify({
+        'cache_valid': is_cache_valid(),
+        'scraping_in_progress': scraping_in_progress
+    })
+
+@app.route('/api/debug')
+def debug_puzzle_data():
+    """Debug endpoint to check puzzle data and response format"""
+    try:
+        # Scrape fresh data
+        print("DEBUG: Fetching fresh data for debugging")
+        scraper = LetterBoxedScraper()
+        sides, nyt_solution, nyt_dictionary = scraper.get_puzzle_data()
+        
+        # Check formats
+        response = {
+            "sides_type": str(type(sides)),
+            "sides_value": sides,
+            "nyt_solution_type": str(type(nyt_solution)),
+            "nyt_solution_value": nyt_solution,
+            "dictionary_type": str(type(nyt_dictionary)),
+            "dictionary_length": len(nyt_dictionary) if nyt_dictionary else 0,
+            "sample_words": nyt_dictionary[:5] if nyt_dictionary and len(nyt_dictionary) >= 5 else []
+        }
+        
+        # Check cache
+        if is_cache_valid():
+            response["cache_status"] = "valid"
+            response["cached_data"] = {
+                "lotta_solution": cache['puzzle_data']['lotta_solution'] if 'lotta_solution' in cache['puzzle_data'] else None,
+                "lotta_solution_type": str(type(cache['puzzle_data'].get('lotta_solution', None))),
+                "lotta_solution_length": len(cache['puzzle_data']['lotta_solution']) if 'lotta_solution' in cache['puzzle_data'] and cache['puzzle_data']['lotta_solution'] else 0
+            }
+        else:
+            response["cache_status"] = "invalid or missing"
+        
+        return jsonify(response)
+    except Exception as e:
+        import traceback
+        print(f"Error in debug endpoint: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()})
 
 def init_scheduler():
     """Initialize the scheduler to update puzzle data at 3:05 AM EST (when NYT updates)"""

@@ -19,6 +19,6 @@ setup(
     ],
     include_package_data=True,
     package_data={
-        "lottawords": ["data/*.txt", "templates/*.html"],
+        "lottawords": ["templates/*.html"],
     },
 ) 

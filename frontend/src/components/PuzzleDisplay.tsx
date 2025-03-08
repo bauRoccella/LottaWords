@@ -189,6 +189,8 @@ const ToggleButton = styled.button`
 
 const PuzzleDisplay: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingRetries, setLoadingRetries] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState("Loading puzzle...");
   const [puzzleData, setPuzzleData] = useState<PuzzleData>({
     square: {
       top: '',
@@ -206,22 +208,55 @@ const PuzzleDisplay: React.FC = () => {
   const [letterPositions, setLetterPositions] = useState<{[key: string]: {x: number, y: number}}>({});
   const [showNYTSolution, setShowNYTSolution] = useState(false);
 
-  useEffect(() => {
-    const fetchPuzzleData = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/puzzle');
-        const data = await response.json();
-        console.log('API Response:', data);
-        setPuzzleData(data);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching puzzle data:', error);
-        setError('Failed to fetch puzzle data');
-        setIsLoading(false);
-      }
-    };
+  // Function to handle automatic retrying
+  const retryFetchWithDelay = (delay = 2000, maxRetries = 20) => {
+    if (loadingRetries >= maxRetries) {
+      setError("Timed out waiting for data. Please refresh the page.");
+      setIsLoading(false);
+      return;
+    }
 
+    setLoadingRetries(prev => prev + 1);
+    setLoadingMessage(`Loading puzzle... (Attempt ${loadingRetries + 1}/${maxRetries})`);
+    
+    setTimeout(() => {
+      console.log(`Retrying data fetch (attempt ${loadingRetries + 1})`);
+      fetchPuzzleData();
+    }, delay);
+  };
+
+  const fetchPuzzleData = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/puzzle');
+      const data = await response.json();
+      console.log('API Response:', data);
+      
+      // Check if we got an empty response or error
+      if (!data || data.error || (data.status === 'loading')) {
+        console.log('Data not ready yet, retrying...');
+        retryFetchWithDelay();
+        return;
+      }
+
+      // Check if we got valid puzzle data
+      if (!data.square || !data.square.top) {
+        console.log('Received incomplete data, retrying...');
+        retryFetchWithDelay();
+        return;
+      }
+      
+      setPuzzleData(data);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching puzzle data:', error);
+      // Instead of failing, retry
+      retryFetchWithDelay();
+    }
+  };
+
+  useEffect(() => {
     fetchPuzzleData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -367,7 +402,7 @@ const PuzzleDisplay: React.FC = () => {
   `;
 
   if (isLoading) {
-    return <Container>Loading puzzle...</Container>;
+    return <Container>{loadingMessage}</Container>;
   }
 
   if (error || !puzzleData) {
