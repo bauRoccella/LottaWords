@@ -2,7 +2,7 @@
 
 A professional implementation of a solver for the NYT Letter Boxed puzzle game, featuring both web interface and REST API.
 
-![LottaWords Screenshot](screenshot.png)
+![screenshot](https://github.com/user-attachments/assets/b7199c48-56c4-43f4-9b59-f43838133519)
 
 ## Features
 
