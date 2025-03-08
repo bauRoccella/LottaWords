@@ -51,9 +51,6 @@ class LetterBoxedSolver:
         for side, letters in square.items():
             normalized_square[side] = {letter.lower() for letter in letters}
         
-        # Debug output
-        print(f"Checking word '{word}' against square {normalized_square}")
-        
         # Check if all letters are in the square
         all_letters = set()
         for side_letters in normalized_square.values():
@@ -62,7 +59,6 @@ class LetterBoxedSolver:
         # Check that all word letters are in the square
         for letter in word:
             if letter not in all_letters:
-                print(f"Word '{word}' contains letter '{letter}' not in the square")
                 return False
         
         # Find which side each letter belongs to
@@ -77,10 +73,8 @@ class LetterBoxedSolver:
             curr_letter = word[i]
             
             if letter_sides[prev_letter] == letter_sides[curr_letter]:
-                print(f"Word '{word}' has consecutive letters from same side: {prev_letter}, {curr_letter}")
                 return False
                 
-        print(f"Word '{word}' is valid")
         return True
 
     def covers_all_letters(self, used_letters: Set[str], square: Dict[str, Set[str]]) -> bool:
@@ -96,17 +90,12 @@ class LetterBoxedSolver:
                 all_letters.update(letter.lower() for letter in letters)
             else:
                 all_letters.update(letter.lower() for letter in letters)
-                
-        print(f"Checking coverage - All letters in puzzle: {sorted(all_letters)}")
-        print(f"Letters used in solution: {sorted(used_letters)}")
         
         # Check if every letter from the puzzle is in the used_letters
         missing_letters = all_letters - used_letters
         if missing_letters:
-            print(f"Missing letters: {sorted(missing_letters)}")
             return False
             
-        print("Solution covers all letters!")
         return True
 
     def word_priority(self, word: str, used_letters: Set[str]) -> int:
@@ -128,34 +117,20 @@ class LetterBoxedSolver:
         """
         # Ensure all inputs are valid
         if not dictionary or not isinstance(dictionary, list):
-            print("ERROR: Invalid dictionary input, must be a non-empty list")
             return []  # Return empty list, not None
             
         # Ensure all dictionary items are strings
         try:
             word_source = [str(word) for word in dictionary]
         except Exception as e:
-            print(f"ERROR converting dictionary items to strings: {e}")
             return []
-        
-        # Debug the square structure
-        print(f"Square before normalization: {square}")
         
         # Use normalized square without modifying input
         normalized_square = self._normalize_square(square)
-        print(f"Normalized square: {normalized_square}")
-        
-        # Debug - check the structure of the first few words
-        if word_source:
-            print(f"Dictionary sample (first 5): {word_source[:5]}")
         
         # Get valid words and sort by length (prefer shorter words)
         playable_words = []
         original_case = {}  # Map lowercase words to their original case
-        
-        # Check a sample of words to debug validation
-        sample_words = word_source[:20] if len(word_source) > 20 else word_source
-        print(f"Testing sample of {len(sample_words)} words for validity")
         
         for word in word_source:
             if not word:  # Skip empty strings
@@ -167,14 +142,8 @@ class LetterBoxedSolver:
             if is_valid:
                 playable_words.append(word_lower)
                 original_case[word_lower] = word  # Store original case
-                
-        print(f"Found {len(playable_words)} valid words out of {len(word_source)} total dictionary words")
-        
-        if playable_words:
-            print(f"Valid words sample: {playable_words[:5]}")
         
         if not playable_words:
-            print("No valid words found, returning empty solution")
             return []  # Return empty list, not None
             
         # Sort by length and then by number of unique letters
@@ -204,8 +173,6 @@ class LetterBoxedSolver:
                 all_puzzle_letters.update(letter.lower() for letter in letters)
             else:
                 all_puzzle_letters.update(letter.lower() for letter in letters)
-                
-        print(f"Total puzzle letters to cover: {sorted(all_puzzle_letters)}")
         
         queue: deque = deque()
         for word in playable_words:
@@ -236,9 +203,6 @@ class LetterBoxedSolver:
             
             # Check if this solution covers all letters in the puzzle
             if all_puzzle_letters.issubset(used_letters):
-                print(f"Found solution with {len(current_words)} words: {current_words}")
-                print(f"Letter coverage: {len(used_letters)}/{len(all_puzzle_letters)} letters")
-                
                 # Double-check with the detailed verification
                 if self.covers_all_letters(used_letters, square):
                     min_solution = current_words
@@ -246,8 +210,6 @@ class LetterBoxedSolver:
                     # Early exit if we find a 2-word solution
                     if min_solution_len <= 2:
                         break
-                else:
-                    print("Warning: Potential solution fails verification - continuing search")
                 continue
 
             # Only continue search if we haven't reached the maximum solution length
@@ -279,55 +241,31 @@ class LetterBoxedSolver:
                 new_letters = used_letters | unique_letters_map[word]
                 queue.append((new_words, new_letters))
         
-        print(f"Search completed after {search_iterations} iterations")
-        
         # Always return a list, never None
         result = []
         if min_solution:
             # Convert solution back to original case
             try:
                 result = [original_case[word] for word in min_solution]
-                print(f"Final solution: {result}")
-                
-                # Verify once more that result covers all letters
-                used_letters = set()
-                for word in result:
-                    used_letters.update(letter.lower() for letter in word)
-                
-                missing = all_puzzle_letters - {l.lower() for l in used_letters}
-                if missing:
-                    print(f"WARNING: Final solution is missing letters: {missing}")
-                else:
-                    print("Final solution covers all puzzle letters!")
             except Exception as e:
-                print(f"ERROR converting solution to original case: {e}")
                 # Fallback to lowercase solution if conversion fails
                 result = min_solution
         elif playable_words:
             # If no solution found but we have valid words, return single longest word
-            print("No complete solution found - finding best partial solution")
             # Sort by unique letter coverage
             best_words = sorted(playable_words, 
                                key=lambda w: (len(set(w).intersection(all_puzzle_letters)), -len(w)))
             if best_words:
                 best_word = best_words[-1]  # Word with most puzzle letter coverage
                 result = [original_case.get(best_word, best_word)]
-                print(f"Using partial solution: {result}")
                 
-                # Show which letters are still uncovered
-                covered = set(best_word.lower())
-                missing = all_puzzle_letters - covered
-                print(f"Partial solution missing letters: {missing}")
-        
         # Final validation to ensure we're returning a list of strings
         if not isinstance(result, list):
-            print(f"ERROR: Result is not a list: {result}")
             return []
             
         # Ensure all items are strings
         for i, item in enumerate(result):
             if not isinstance(item, str):
-                print(f"WARNING: Solution item {i} is not a string: {item}")
                 result[i] = str(item)
                 
         return result
